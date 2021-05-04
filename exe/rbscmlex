@@ -1,0 +1,68 @@
+#!/usr/bin/env ruby
+
+require "rbscmlex"
+
+def version
+  "rbscmlex version #{Rbscmlex::VERSION} #{Rbscmlex::RELEASE}"
+end
+
+def usage
+  <<HELP
+usage:
+    rbscmlex [option] [FILE ...]
+option:
+    -o, --output-file OUTPUT_FILE : specify the output file
+    -t, --format-type TYPE : specify the output format
+    -d, --debug   : specify to run verbose mode
+    -v, --version : print version
+    -h, --help    : show this message
+
+OUTPUT_FORMAT:
+    Use one of the following name to specify the output format.
+        token, hash, csv
+HELP
+end
+
+def opt_parse(args, opts = {})
+  files = []
+  while args.size > 0
+    arg = args.shift
+    case arg
+    when "-o", "--output-file"
+      opts[:output_file] = args.shift
+    when "-t", "--format-type"
+      format_type = args.shift
+      raise ArgumentError, "not specified as format type" if format_type.nil?
+      opts[:format_type] = format_type.intern
+    when "-d", "--debug"
+      opts[:verbose] = true
+    when "-v", "--version"
+      puts version
+      exit 0
+    when "-h", "--help"
+      puts usage
+      exit 0
+    else                        # must be a filename
+      files << arg if arg
+    end
+  end
+  args.concat(files)
+  opts
+end
+
+opts = opt_parse(ARGV)
+if opts[:verbose]
+  puts version
+  format = opts[:format_type] || "default"
+  puts "Output format: #{format}"
+  ofname = opts[:output_file] || "STDOUT"
+  puts "Output file: #{ofname}"
+end
+
+if ARGV.size > 0
+  puts "reading... #{ARGV.join(", ")}" if opts[:verbose]
+  puts ARGF.entries
+else
+  # read source form STDIN
+  # ...
+end

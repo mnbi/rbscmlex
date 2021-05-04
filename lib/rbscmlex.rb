@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require_relative "rbscmlex/version"
-
 module Rbscmlex
-  class Error < StandardError; end
-  # Your code goes here...
+  require_relative "rbscmlex/error"
+  require_relative "rbscmlex/token"
+  require_relative "rbscmlex/lexer"
+  require_relative "rbscmlex/version"
 end
