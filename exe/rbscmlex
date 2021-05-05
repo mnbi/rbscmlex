@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require "readline"
 require "rbscmlex"
 
 def version
@@ -19,7 +20,7 @@ option:
 
 OUTPUT_FORMAT:
     Use one of the following name to specify the output format.
-        token, hash, csv
+        token, hash, json
 HELP
 end
 
@@ -59,10 +60,26 @@ if opts[:verbose]
   puts "Output file: #{ofname}"
 end
 
+of = STDOUT
+of = File.open(opts[:output_file], "w") if opts[:output_file]
+type = opts[:format_type] || :token
+
 if ARGV.size > 0
   puts "reading... #{ARGV.join(", ")}" if opts[:verbose]
-  puts ARGF.entries
+
+  source = ARGF.entries.join(" ")
+  lex = Rbscmlex::Lexer.new(source, type: type)
+
+  Kernel.loop {
+    of.puts lex.next_token
+  }
 else
-  # read source form STDIN
-  # ...
+  puts "reading...STDIN" if opts[:verbose]
+
+  Kernel.loop {
+    src_line = Readline::readline("Rbscmlex> ")
+    break if src_line.nil?
+    lex = Rbscmlex::Lexer.new(src_line, type: type)
+    Kernel.loop { of.puts lex.next_token }
+  }
 end
