@@ -80,7 +80,7 @@ class RbscmlexLexerTest < Minitest::Test
 
   def test_it_can_detect_lparen
     l = Rbscmlex::Lexer.new("(")
-    token = l.next
+    token = l.next_token
 
     assert_equal :lparen, token.type
     assert_equal "(", token.literal
@@ -88,7 +88,7 @@ class RbscmlexLexerTest < Minitest::Test
 
   def test_it_can_detect_rparen
     l = Rbscmlex::Lexer.new(")")
-    token = l.next
+    token = l.next_token
 
     assert_equal :rparen, token.type
     assert_equal ")", token.literal
@@ -98,7 +98,7 @@ class RbscmlexLexerTest < Minitest::Test
 
   def test_it_can_detect_vector_lpraen
     l = Rbscmlex::Lexer.new("#(")
-    token = l.next
+    token = l.next_token
 
     assert_equal :vec_lparen, token.type
     assert_equal "#(", token.literal
@@ -153,7 +153,7 @@ class RbscmlexLexerTest < Minitest::Test
     ]
     l = Rbscmlex::Lexer.new(input)
     expected_tokens.each { |expected|
-      token = l.next
+      token = l.next_token
       assert_equal expected, token.type
     }
   end
@@ -163,7 +163,7 @@ class RbscmlexLexerTest < Minitest::Test
   def assert_token_type(test_cases, expected_type)
     test_cases.each { |input|
       l = Rbscmlex::Lexer.new(input)
-      token = l.next
+      token = l.next_token
       assert_equal expected_type, token.type
       assert_equal input.rstrip.lstrip, token.literal
     }
@@ -172,7 +172,7 @@ class RbscmlexLexerTest < Minitest::Test
   def refute_token_type(test_cases, expected_type)
     test_cases.each { |input|
       l = Rbscmlex::Lexer.new(input)
-      token = l.next
+      token = l.next_token
       refute_equal expected_type, token.type
       assert_equal input.rstrip.lstrip, token.literal
     }
