@@ -9,7 +9,16 @@ in Ruby.
 
 ## Installation
 
-(not ready to install)
+Execute as:
+
+    > gem install rbscmlex
+
+## Usage
+
+See `examples/sample_parser.rb` to know about how to use as a lexical
+analyzer for Scheme.
+
+Or, run `rbscmlex` to see the output of the lexer.
 
 ## Development
 

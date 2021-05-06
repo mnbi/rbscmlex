@@ -62,13 +62,13 @@ end
 
 of = STDOUT
 of = File.open(opts[:output_file], "w") if opts[:output_file]
-type = opts[:format_type] || :token
+form = opts[:format_type] || :token
 
 if ARGV.size > 0
   puts "reading... #{ARGV.join(", ")}" if opts[:verbose]
 
   source = ARGF.entries.join(" ")
-  lex = Rbscmlex::Lexer.new(source, type: type)
+  lex = Rbscmlex::Lexer.new(source, form: form)
 
   Kernel.loop {
     of.puts lex.next_token

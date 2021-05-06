@@ -3,10 +3,13 @@
 module Rbscmlex
   class Error < StandardError; end
 
-  class UnknownTokenType < Error
+  class UnknownTokenTypeError < Error
   end
 
   class InvalidConversionTypeError < Error
+  end
+
+  class InvalidHashError < Error
   end
 
   class InvalidJsonError < Error

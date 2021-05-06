@@ -4,17 +4,16 @@ require "json"
 
 module Rbscmlex
 
-  # A base class of a lexical analyzer for Scheme program.  It returns
-  # an Array instance of tokens.  The representation of each token is
-  # depends on the specification of type, which is specified to the
-  # `new` method.
+  # A lexical analyzer for Scheme program.  It returns an Array
+  # instance of tokens.  The representation of each token is depends
+  # on the specification of type, which is specified to the `new`
+  # method.
   #
   # Currently, 3 types of the representation are available.
   #
   #   1. a struct Token,
   #   2. a Hash object,
   #   3. a JSON string.
-  #
 
   class Lexer
 
@@ -65,8 +64,8 @@ module Rbscmlex
 
     include Enumerable
 
-    def initialize(src, type: :token)
-      @type = type
+    def initialize(src, form: TOKEN_DEFAULT_FORM)
+      @form = form
       @tokens = tokenize(src)
       @size = @tokens.size
 
@@ -74,7 +73,12 @@ module Rbscmlex
     end
 
     def each(&blk)
-      @tokens.each(&blk)
+      if block_given?
+        @tokens.each(&blk)
+        self
+      else
+        @tokens.each
+      end
     end
 
     def to_a
@@ -90,13 +94,14 @@ module Rbscmlex
     end
 
     def next_token
-      raise StopIteration if @next_pos >= @size
+      check_pos
       @current_pos = @next_pos
       @next_pos += 1
       @tokens[@current_pos]
     end
 
     def peek_token(num = 0)
+      check_pos
       @tokens[@next_pos + num]
     end
 
@@ -107,6 +112,10 @@ module Rbscmlex
 
     private
 
+    def check_pos
+      raise StopIteration if @next_pos >= @size
+    end
+
     S2R_MAP = { "(" => "( ", ")" => " ) ", "'" => " ' " } # :nodoc:
 
     def tokenize(src)
@@ -115,41 +124,31 @@ module Rbscmlex
       cooked.split(" ").map { |literal|
         case literal
         when "("
-          new_token(:lparen, literal)
+          Rbscmlex.new_token(:lparen, literal, @form)
         when ")"
-          new_token(:rparen, literal)
+          Rbscmlex.new_token(:rparen, literal, @form)
         when "."
-          new_token(:dot, literal)
+          Rbscmlex.new_token(:dot, literal, @form)
         when "'"
-          new_token(:quotation, literal)
+          Rbscmlex.new_token(:quotation, literal, @form)
         when "#("
-          new_token(:vec_lparen, literal)
+          Rbscmlex.new_token(:vec_lparen, literal, @form)
         when BOOLEAN
-          new_token(:boolean, literal)
+          Rbscmlex.new_token(:boolean, literal, @form)
         when IDENTIFIER
-          new_token(:identifier, literal)
+          Rbscmlex.new_token(:identifier, literal, @form)
         when CHAR
-          new_token(:character, literal)
+          Rbscmlex.new_token(:character, literal, @form)
         when STRING
-          new_token(:string, literal)
+          Rbscmlex.new_token(:string, literal, @form)
         when ARITHMETIC_OPS, COMPARISON_OPS
-          new_token(:op_proc, literal)
+          Rbscmlex.new_token(:op_proc, literal, @form)
         when REAL_NUM, RATIONAL, COMPLEX, PURE_IMAG
-          new_token(:number, literal)
+          Rbscmlex.new_token(:number, literal, @form)
         else
-          new_token(:illegal, literal)
+          Rbscmlex.new_token(:illegal, literal, @form)
         end
       }
-    end
-
-    def new_token(type, literal)
-      token = Token.new(type, literal)
-      if @type != :token
-        converter = "to_#{@type}".intern
-        raise InvalidConversionTypeError unless token.respond_to?(converter)
-        token = token.send(converter)
-      end
-      token
     end
 
   end
