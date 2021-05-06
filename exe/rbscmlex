@@ -79,7 +79,7 @@ else
   Kernel.loop {
     src_line = Readline::readline("Rbscmlex> ")
     break if src_line.nil?
-    lex = Rbscmlex::Lexer.new(src_line, type: type)
+    lex = Rbscmlex::Lexer.new(src_line, form: form)
     Kernel.loop { of.puts lex.next_token }
   }
 end

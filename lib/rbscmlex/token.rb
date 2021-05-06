@@ -50,9 +50,9 @@ module Rbscmlex
       when :token
         Token.new(type, literal)
       when :hash
-        {type: type, literal: literal}
+        make_hash(type, literal)
       when :json
-        JSON.generate(to_hash)
+        JSON.generate(make_hash(type, literal))
       else
         raise InvalidConversionTypeError, "cannot generate #{type} as token"
       end
@@ -62,6 +62,12 @@ module Rbscmlex
 
     def token_type?(type)
       TOKEN_TYPES.include?(type)
+    end
+
+    # Returns a new Hash object with type and literal.
+
+    def make_hash(type, literal)
+      {type: type, literal: literal}
     end
 
     # Converts a Hash object, which has type and literal as its key,
