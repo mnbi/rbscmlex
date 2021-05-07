@@ -158,6 +158,45 @@ class RbscmlexLexerTest < Minitest::Test
     }
   end
 
+  # initialize from an array of tokens
+  def test_it_can_initialize_from_tokens
+    arys = [
+      [                         # Hash
+        {type: :lparen, literal: "("},
+        {type: :identifier, literal: "list"},
+        {type: :number, literal: "1"},
+        {type: :number, literal: "2"},
+        {type: :number, literal: "3"},
+        {type: :rparen, literal: ")"},
+      ],
+      [                         # JSON
+        {"type":"lparen","literal":"("},
+        {"type":"identifier","literal":"list"},
+        {"type":"number","literal":"1"},
+        {"type":"number","literal":"2"},
+        {"type":"number","literal":"3"},
+        {"type":"rparen","literal":")"},
+      ],
+    ]
+
+    expected_tokens = [
+      :lparen,
+      :identifier,
+      :number,
+      :number,
+      :number,
+      :rparen,
+    ]
+
+    arys.each { |ary|
+      lex = Rbscmlex::Lexer.new(ary)
+      expected_tokens.each { |expected|
+        token = lex.next_token
+        assert_equal expected, token.type
+      }
+    }
+  end
+
   private
 
   def assert_token_type(test_cases, expected_type)

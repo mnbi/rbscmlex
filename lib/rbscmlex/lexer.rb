@@ -64,56 +64,136 @@ module Rbscmlex
 
     include Enumerable
 
-    def initialize(src, form: TOKEN_DEFAULT_FORM)
-      @form = form
-      @tokens = tokenize(src)
-      @size = @tokens.size
+    def initialize(obj, form: TOKEN_DEFAULT_FORM)
+      set_form(form)
+      init_pos
+      case obj
+      when String
+        # obj must be source program of Scheme.
+        @tokens = tokenize(obj)
+      when Array
+        # obj might be an array of tokens.
+        input_form = detect_form(obj[0])
+        case input_form
+        when :hash, :json, :token
+          @tokens = read_tokens(obj, form: input_form)
+        else
+          raise InvalidConversionTypeError, "cannot convert #{obj[0]} as token"
+        end
+      else
+        raise InvalidConversionTypeError, "cannot convert #{obj} as tokens"
+      end
+    end
 
-      @current_pos = @next_pos = 0
+    def [](index)
+      convert(@tokens[index])
     end
 
     def each(&blk)
       if block_given?
-        @tokens.each(&blk)
+        @tokens.each { |tk|
+          yield convert(tk)
+        }
         self
       else
-        @tokens.each
+        to_a.to_enum
       end
     end
 
     def to_a
-      @tokens
+      convert_all(@tokens)
     end
 
     def size
-      @size
+      @tokens.size
     end
 
     def current_token
-      @tokens[@current_pos]
+      self[@current_pos]
     end
 
     def next_token
       check_pos
       @current_pos = @next_pos
       @next_pos += 1
-      @tokens[@current_pos]
+      self[@current_pos]
     end
 
     def peek_token(num = 0)
       check_pos
-      @tokens[@next_pos + num]
+      self[@next_pos + num]
     end
 
     def rewind
-      @current_pos = @next_pos = 0
+      init_pos
       self
     end
 
+    # :stopdoc:
+
     private
 
+    def set_form(form)
+      if TOKEN_FORMS.include?(form)
+        @form = form
+      else
+        raise InvalidConversionTypeError, "cannot generate #{form} as token"
+      end
+    end
+
+    def init_pos
+      @current_pos = @next_pos = 0
+    end
+
+    def read_tokens(ary, form: :token)
+      conv_proc ={hash: :hash2token, json: :json2token, token: nil}[form]
+      conv_proc ? ary.map{|e| Rbscmlex.send(conv_proc, e)} : ary.dup
+    end
+
+    def detect_form(obj)
+      case obj
+      when Hash
+        valid_token?(obj) ? :hash : nil
+      when Token
+        :token
+      when String
+        begin
+          JSON.parse(obj, symbolize_names: true)
+        rescue JSON::ParserError => _
+          nil
+        else
+          :json
+        end
+      else
+        nil
+      end
+    end
+
+    def valid_token?(obj)
+      case obj
+      when Hash
+        obj.key?(:type) and obj.key?(:literal)
+      when Token
+        Rbscmlex.token_type?(obj.type)
+      else
+        false
+      end
+    end
+
+    def converter
+      { hash: :to_h, json: :to_json, token: nil}[@form]
+    end
+
+    def convert(token)
+      converter ? token.send(converter) : token
+    end
+
+    def convert_all(tokens)
+      converter ? token.map(&converter) : tokens
+    end
+
     def check_pos
-      raise StopIteration if @next_pos >= @size
+      raise StopIteration if @next_pos >= size
     end
 
     S2R_MAP = { "(" => "( ", ")" => " ) ", "'" => " ' " } # :nodoc:
@@ -124,32 +204,34 @@ module Rbscmlex
       cooked.split(" ").map { |literal|
         case literal
         when "("
-          Rbscmlex.new_token(:lparen, literal, @form)
+          Rbscmlex.new_token(:lparen, literal)
         when ")"
-          Rbscmlex.new_token(:rparen, literal, @form)
+          Rbscmlex.new_token(:rparen, literal)
         when "."
-          Rbscmlex.new_token(:dot, literal, @form)
+          Rbscmlex.new_token(:dot, literal)
         when "'"
-          Rbscmlex.new_token(:quotation, literal, @form)
+          Rbscmlex.new_token(:quotation, literal)
         when "#("
-          Rbscmlex.new_token(:vec_lparen, literal, @form)
+          Rbscmlex.new_token(:vec_lparen, literal)
         when BOOLEAN
-          Rbscmlex.new_token(:boolean, literal, @form)
+          Rbscmlex.new_token(:boolean, literal)
         when IDENTIFIER
-          Rbscmlex.new_token(:identifier, literal, @form)
+          Rbscmlex.new_token(:identifier, literal)
         when CHAR
-          Rbscmlex.new_token(:character, literal, @form)
+          Rbscmlex.new_token(:character, literal)
         when STRING
-          Rbscmlex.new_token(:string, literal, @form)
+          Rbscmlex.new_token(:string, literal)
         when ARITHMETIC_OPS, COMPARISON_OPS
-          Rbscmlex.new_token(:op_proc, literal, @form)
+          Rbscmlex.new_token(:op_proc, literal)
         when REAL_NUM, RATIONAL, COMPLEX, PURE_IMAG
-          Rbscmlex.new_token(:number, literal, @form)
+          Rbscmlex.new_token(:number, literal)
         else
-          Rbscmlex.new_token(:illegal, literal, @form)
+          Rbscmlex.new_token(:illegal, literal)
         end
       }
     end
+
+    # :startdoc:
 
   end
 end
