@@ -27,8 +27,6 @@ module Rbscmlex
     :number,                  # `123`, `456.789`, `1/2`, `3+4i`
     :character,               # `#\a`
     :string,                  # `"hoge"`
-    # operators
-    :op_proc,                 # `+`, `-`, ...
     # control
     :illegal,
   ]

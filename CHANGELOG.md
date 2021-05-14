@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 - (nothing to record here)
 
+## [0.1.3] - 2021-05-15
+### Added
+- Add `Lexer#skip_token(offset)`
+
+### Changed
+- Modify `Lexer#next_token` to accept an argument to specify the
+  offset to read position.
+
+### Fixed
+- Fix issue #4: Some "peculiar identifiers" are regarded as illegal.
+
 ## [0.1.2] - 2021-05-07
 ### Added
 - Add a mechanism to initialize a Parser instance from an array of

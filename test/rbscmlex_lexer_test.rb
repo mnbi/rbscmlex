@@ -4,6 +4,24 @@ require "test_helper"
 
 class RbscmlexLexerTest < Minitest::Test
 
+  # issue #4
+
+  def test_it_can_handle_pecurilar_identifiers
+    tcs = [
+      "...",
+      "+",
+      "+soup+",
+      "<=?",
+      "->string",
+      "a34kTMNs",
+      "lambda",
+      "q",
+      "V17a",
+      "the-word-recursion-has-many-meanings",
+    ]
+    assert_token_type(tcs, :identifier)
+  end
+
   # boolean
 
   def test_it_can_detect_f
@@ -122,7 +140,7 @@ class RbscmlexLexerTest < Minitest::Test
       :identifier,              # if
       #
       :lparen,                  # (
-      :op_proc,                 # =
+      :identifier,              # =
       #
       :identifier,              # n
       #
@@ -132,7 +150,7 @@ class RbscmlexLexerTest < Minitest::Test
       :number,                  # 1
       #
       :lparen,                  # (
-      :op_proc,                 # *
+      :identifier,              # *
       #
       :identifier,              # n
       #
@@ -140,7 +158,7 @@ class RbscmlexLexerTest < Minitest::Test
       :identifier,              # fact
       #
       :lparen,                  # (
-      :op_proc,                 # -
+      :identifier,              # -
       #
       :identifier,              # n
       #
