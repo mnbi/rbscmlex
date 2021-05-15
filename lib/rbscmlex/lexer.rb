@@ -25,43 +25,6 @@ module Rbscmlex
 
     end
 
-    # :stopdoc:
-
-    BOOLEAN    = /\A#(f(alse)?|t(rue)?)\Z/
-    STRING     = /\A\"[^\"]*\"\Z/
-
-    # idents
-    EXTENDED_CHARS = "!\\$%&\\*\\+\\-\\./:<=>\\?@\\^_~"
-    IDENT_PAT  = "[a-zA-Z_][a-zA-Z0-9#{EXTENDED_CHARS}]*"
-    IDENTIFIER = Regexp.new("\\A#{IDENT_PAT}\\Z")
-
-    # operators
-    ARITHMETIC_OPS = /\A[+\-*\/%]\Z/
-    COMPARISON_OPS = /\A([<>]=?|=)\Z/
-
-    # numbers
-    REAL_PAT   = "(([1-9][0-9]*)|0)(\.[0-9]+)?"
-    RAT_PAT    = "#{REAL_PAT}\\/#{REAL_PAT}"
-    C_REAL_PAT = "(#{REAL_PAT}|#{RAT_PAT})"
-    C_IMAG_PAT = "#{C_REAL_PAT}"
-    COMP_PAT   = "#{C_REAL_PAT}(\\+|\\-)#{C_IMAG_PAT}i"
-
-    REAL_NUM   = Regexp.new("\\A[+-]?#{REAL_PAT}\\Z")
-    RATIONAL   = Regexp.new("\\A[+-]?#{RAT_PAT}\\Z")
-    COMPLEX    = Regexp.new("\\A[+-]?#{COMP_PAT}\\Z")
-    PURE_IMAG  = Regexp.new("\\A[+-](#{C_IMAG_PAT})?i\\Z")
-
-    # char
-    SINGLE_CHAR_PAT = "."
-    SPACE_PAT       = "space"
-    NEWLINE_PAT     = "newline"
-
-    CHAR_PREFIX = "\#\\\\"
-    CHAR_PAT    = "(#{SINGLE_CHAR_PAT}|#{SPACE_PAT}|#{NEWLINE_PAT})"
-    CHAR        = Regexp.new("\\A#{CHAR_PREFIX}#{CHAR_PAT}\\Z")
-
-    # :startdoc:
-
     include Enumerable
 
     def initialize(obj, form: TOKEN_DEFAULT_FORM)
@@ -86,7 +49,8 @@ module Rbscmlex
     end
 
     def [](index)
-      convert(@tokens[index])
+      token = @tokens[index]
+      token and convert(token)
     end
 
     def each(&blk)
@@ -112,16 +76,25 @@ module Rbscmlex
       self[@current_pos]
     end
 
-    def next_token
-      check_pos
-      @current_pos = @next_pos
-      @next_pos += 1
+    def next_token(offset = 0)
+      check_pos(offset)
+      skip_token(offset)
       self[@current_pos]
     end
 
-    def peek_token(num = 0)
-      check_pos
-      self[@next_pos + num]
+    def peek_token(offset = 0)
+      # Since `peek_token` does not modify the position to read, raise
+      # StopIteration only if the next position truly exceed the
+      # bound.
+      check_pos(0)
+      self[@next_pos + offset]
+    end
+
+    def skip_token(offset = 0)
+      check_pos(offset)
+      @current_pos = @next_pos + offset
+      @next_pos += (1 + offset)
+      nil
     end
 
     def rewind
@@ -192,11 +165,39 @@ module Rbscmlex
       converter ? token.map(&converter) : tokens
     end
 
-    def check_pos
-      raise StopIteration if @next_pos >= size
+    def check_pos(offset = 0)
+      raise StopIteration if (@next_pos + offset) >= size
     end
 
-    S2R_MAP = { "(" => "( ", ")" => " ) ", "'" => " ' " } # :nodoc:
+    # :stopdoc:
+
+    S2R_MAP = { "(" => "( ", ")" => " ) ", "'" => " ' " }
+
+    BOOLEAN    = /\A#(f(alse)?|t(rue)?)\Z/
+    STRING     = /\A\"[^\"]*\"\Z/
+
+    # numbers
+    REAL_PAT   = "(([1-9][0-9]*)|0)(\.[0-9]+)?"
+    RAT_PAT    = "#{REAL_PAT}\\/#{REAL_PAT}"
+    C_REAL_PAT = "(#{REAL_PAT}|#{RAT_PAT})"
+    C_IMAG_PAT = "#{C_REAL_PAT}"
+    COMP_PAT   = "#{C_REAL_PAT}(\\+|\\-)#{C_IMAG_PAT}i"
+
+    REAL_NUM   = Regexp.new("\\A[+-]?#{REAL_PAT}\\Z")
+    RATIONAL   = Regexp.new("\\A[+-]?#{RAT_PAT}\\Z")
+    COMPLEX    = Regexp.new("\\A[+-]?#{COMP_PAT}\\Z")
+    PURE_IMAG  = Regexp.new("\\A[+-](#{C_IMAG_PAT})?i\\Z")
+
+    # char
+    SINGLE_CHAR_PAT = "."
+    SPACE_PAT       = "space"
+    NEWLINE_PAT     = "newline"
+
+    CHAR_PREFIX = "\#\\\\"
+    CHAR_PAT    = "(#{SINGLE_CHAR_PAT}|#{SPACE_PAT}|#{NEWLINE_PAT})"
+    CHAR        = Regexp.new("\\A#{CHAR_PREFIX}#{CHAR_PAT}\\Z")
+
+    # :startdoc:
 
     def tokenize(src)
       cooked = src.gsub(/[()']/, S2R_MAP)
@@ -213,22 +214,109 @@ module Rbscmlex
           Rbscmlex.new_token(:quotation, literal)
         when "#("
           Rbscmlex.new_token(:vec_lparen, literal)
+        when "|"                # not supported yet
+          Rbscmlex.new_token(:illegal, literal)
         when BOOLEAN
           Rbscmlex.new_token(:boolean, literal)
-        when IDENTIFIER
-          Rbscmlex.new_token(:identifier, literal)
         when CHAR
           Rbscmlex.new_token(:character, literal)
         when STRING
           Rbscmlex.new_token(:string, literal)
-        when ARITHMETIC_OPS, COMPARISON_OPS
-          Rbscmlex.new_token(:op_proc, literal)
         when REAL_NUM, RATIONAL, COMPLEX, PURE_IMAG
           Rbscmlex.new_token(:number, literal)
         else
-          Rbscmlex.new_token(:illegal, literal)
+          if Identifier.identifier?(literal)
+            Rbscmlex.new_token(:identifier, literal)
+          else
+            Rbscmlex.new_token(:illegal, literal)
+          end
         end
       }
+    end
+
+    # Holds functions to check a literal is valid as an identifier
+    # defined in R7RS.
+    #
+    # Call identifier? function as follows:
+    #
+    #   Identifier.identifier?(literal)
+    #
+    # It returns true if the literal is valid as an identifier.
+
+    module Identifier
+
+      DIGIT              = "0-9"
+      LETTER             = "a-zA-Z"
+      SPECIAL_INITIAL    = "!\\$%&\\*/:<=>\\?\\^_~"
+      INITIAL            = "#{LETTER}#{SPECIAL_INITIAL}"
+      EXPLICIT_SIGN      = "\\+\\-"
+      SPECIAL_SUBSEQUENT = "#{EXPLICIT_SIGN}\\.@"
+      SUBSEQUENT         = "#{INITIAL}#{DIGIT}#{SPECIAL_SUBSEQUENT}"
+
+      REGEXP_INITIAL = Regexp.new("[#{INITIAL}]")
+      REGEXP_EXPLICIT_SIGN = Regexp.new("[#{EXPLICIT_SIGN}]")
+      REGEXP_SUBSEQUENT = Regexp.new("[#{SUBSEQUENT}]+")
+
+      def self.identifier?(literal)
+        size = literal.size
+        c = literal[0]
+        case c
+        when REGEXP_INITIAL
+          return true if size == 1
+          subsequent?(literal[1..-1])
+        when REGEXP_EXPLICIT_SIGN
+          return true if size == 1
+          if literal[1] == "."
+            dot_identifier?(literal[1..-1])
+          else
+            if sign_subsequent?(literal[1])
+              return true if size == 2
+              subsequent?(literal[2..-1])
+            else
+              false
+            end
+          end
+        when "."
+          dot_identifier?(literal)
+        else
+          false
+        end
+      end
+
+      def self.subsequent?(sub_literal)
+        REGEXP_SUBSEQUENT === sub_literal
+      end
+
+      def self.sign_subsequent?(sub_literal)
+        return false if sub_literal.size != 1
+        case sub_literal[0]
+        when REGEXP_INITIAL
+          true
+        when REGEXP_EXPLICIT_SIGN
+          true
+        when "@"
+          true
+        else
+          false
+        end
+      end
+
+      def self.dot_identifier?(sub_literal)
+        return false if sub_literal[0] != "."
+        return true if sub_literal.size == 1
+        if dot_subsequent?(sub_literal[1])
+          return true if sub_literal.size == 2
+          subsequent?(sub_literal[2..-1])
+        else
+          false
+        end
+      end
+
+      def self.dot_subsequent?(sub_literal)
+        return true if sub_literal == "."
+        sign_subsequent?(sub_literal)
+      end
+
     end
 
     # :startdoc:

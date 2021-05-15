@@ -4,6 +4,146 @@ require "test_helper"
 
 class RbscmlexLexerTest < Minitest::Test
 
+  # issue #5
+
+  def test_it_can_retrieve_token_with_specifying_offset
+    input = "(lambda (x y) (+ x y))"
+    expected_tokens = [
+      :lparen,                  #  0: (
+      :identifier,              #  1: lambda
+      :lparen,                  #  2: (
+      :identifier,              #  3: x
+      :identifier,              #  4: y
+      :rparen,                  #  5: )
+      :lparen,                  #  6: (
+      :identifier,              #  7: +
+      :identifier,              #  8: x
+      :identifier,              #  9: y
+      :rparen,                  # 10: )
+      :rparen,                  # 11: )
+    ]
+    l = Rbscmlex::Lexer.new(input)
+    offset = 3
+    token = l.peek_token(offset)
+    assert_equal expected_tokens[offset], token.type
+    more_offset = 4
+    token = l.peek_token(more_offset)
+    assert_equal expected_tokens[offset + more_offset], token.type
+  end
+
+  def test_it_can_peek_token_with_specifying_offset
+    input = "(lambda (x y) (+ x y))"
+    expected_tokens = [
+      :lparen,                  # (
+      :identifier,              # lambda
+      :lparen,                  # (
+      :identifier,              # x
+      :identifier,              # y
+      :rparen,                  # )
+      :lparen,                  # (
+      :identifier,              # +
+      :identifier,              # x
+      :identifier,              # y
+      :rparen,                  # )
+      :rparen,                  # )
+    ]
+    l = Rbscmlex::Lexer.new(input)
+    0.upto(expected_tokens.size - 1) { |offset|
+      token = l.peek_token(offset)
+      assert_equal expected_tokens[offset], token.type
+    }
+  end
+
+  def test_peek_token_raise_stop_iteration_if_it_exceeds_the_limit
+    input = "(lambda (x y) (+ x y))"
+    expected_tokens = [
+      :lparen,                  # (
+      :identifier,              # lambda
+      :lparen,                  # (
+      :identifier,              # x
+      :identifier,              # y
+      :rparen,                  # )
+      :lparen,                  # (
+      :identifier,              # +
+      :identifier,              # x
+      :identifier,              # y
+      :rparen,                  # )
+      :rparen,                  # )
+    ]
+    l = Rbscmlex::Lexer.new(input)
+    expected_tokens.size.times {
+      _ = l.next_token
+    }
+    assert_raises(StopIteration) {
+      _ = l.peek_token
+    }
+  end
+
+  def test_peek_token_returns_nil_if_it_exeeds_the_limit_with_offset
+    input = "(lambda (x y) (+ x y))"
+    expected_tokens = [
+      :lparen,                  # (
+      :identifier,              # lambda
+      :lparen,                  # (
+      :identifier,              # x
+      :identifier,              # y
+      :rparen,                  # )
+      :lparen,                  # (
+      :identifier,              # +
+      :identifier,              # x
+      :identifier,              # y
+      :rparen,                  # )
+      :rparen,                  # )
+    ]
+    l = Rbscmlex::Lexer.new(input)
+    assert_nil l.peek_token(expected_tokens.size)
+    assert_nil l.peek_token(expected_tokens.size + 1)
+    assert_nil l.peek_token(expected_tokens.size + 2)
+  end
+
+  def test_it_can_skip_token_with_specifying_offset
+    input = "(lambda (x y) (+ x y))"
+    expected_tokens = [
+      :lparen,                  #  0: (
+      :identifier,              #  1: lambda
+      :lparen,                  #  2: (
+      :identifier,              #  3: x
+      :identifier,              #  4: y
+      :rparen,                  #  5: )
+      :lparen,                  #  6: (
+      :identifier,              #  7: +
+      :identifier,              #  8: x
+      :identifier,              #  9: y
+      :rparen,                  # 10: )
+      :rparen,                  # 11: )
+    ]
+    l = Rbscmlex::Lexer.new(input)
+    offset = 3
+    l.skip_token(offset)
+    assert_equal expected_tokens[offset], l.current_token.type
+    more_offset = 4
+    l.skip_token(more_offset)
+    assert_equal expected_tokens[offset + more_offset], l.current_token.type
+  end
+
+  # issue #4
+
+  def test_it_can_handle_pecurilar_identifiers
+    tcs = [
+      "...",
+      "+",
+      "+soup+",
+      "<=?",
+      "->string",
+      "a34kTMNs",
+      "lambda",
+      "q",
+      "V17a",
+      "the-word-recursion-has-many-meanings",
+    ]
+    assert_token_type(tcs, :identifier)
+  end
+
   # boolean
 
   def test_it_can_detect_f
@@ -122,7 +262,7 @@ class RbscmlexLexerTest < Minitest::Test
       :identifier,              # if
       #
       :lparen,                  # (
-      :op_proc,                 # =
+      :identifier,              # =
       #
       :identifier,              # n
       #
@@ -132,7 +272,7 @@ class RbscmlexLexerTest < Minitest::Test
       :number,                  # 1
       #
       :lparen,                  # (
-      :op_proc,                 # *
+      :identifier,              # *
       #
       :identifier,              # n
       #
@@ -140,7 +280,7 @@ class RbscmlexLexerTest < Minitest::Test
       :identifier,              # fact
       #
       :lparen,                  # (
-      :op_proc,                 # -
+      :identifier,              # -
       #
       :identifier,              # n
       #
