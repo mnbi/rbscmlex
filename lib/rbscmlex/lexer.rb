@@ -49,7 +49,8 @@ module Rbscmlex
     end
 
     def [](index)
-      convert(@tokens[index])
+      token = @tokens[index]
+      token and convert(token)
     end
 
     def each(&blk)
@@ -75,16 +76,25 @@ module Rbscmlex
       self[@current_pos]
     end
 
-    def next_token
-      check_pos
-      @current_pos = @next_pos
-      @next_pos += 1
+    def next_token(offset = 0)
+      check_pos(offset)
+      skip_token(offset)
       self[@current_pos]
     end
 
-    def peek_token(num = 0)
-      check_pos
-      self[@next_pos + num]
+    def peek_token(offset = 0)
+      # Since `peek_token` does not modify the position to read, raise
+      # StopIteration only if the next position truly exceed the
+      # bound.
+      check_pos(0)
+      self[@next_pos + offset]
+    end
+
+    def skip_token(offset = 0)
+      check_pos(offset)
+      @current_pos = @next_pos + offset
+      @next_pos += (1 + offset)
+      nil
     end
 
     def rewind
@@ -155,8 +165,8 @@ module Rbscmlex
       converter ? token.map(&converter) : tokens
     end
 
-    def check_pos
-      raise StopIteration if @next_pos >= size
+    def check_pos(offset = 0)
+      raise StopIteration if (@next_pos + offset) >= size
     end
 
     # :stopdoc:
