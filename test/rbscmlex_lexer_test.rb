@@ -4,6 +4,16 @@ require "test_helper"
 
 class RbscmlexLexerTest < Minitest::Test
 
+  # issue #7
+
+  def test_it_can_tokenize_a_string_contains_spaces
+    input = '" a string contains some spaces "'
+    l = Rbscmlex::Lexer.new(input)
+    type, literal = *l.peek_token
+    assert_equal :string, type
+    assert_equal input, literal
+  end
+
   # issue #5
 
   def test_it_can_retrieve_token_with_specifying_offset

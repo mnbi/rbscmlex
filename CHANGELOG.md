@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 - (nothing to record here)
 
+## [0.1.4] - 2021-05-23
+### Fixed
+- Fix issue #7: cannot tokenize a string contains any spaces.
+
 ## [0.1.3] - 2021-05-15
 ### Added
 - Add `Lexer#skip_token(offset)`
