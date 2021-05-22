@@ -169,8 +169,6 @@ module Rbscmlex
       raise StopIteration if (@next_pos + offset) >= size
     end
 
-    # :stopdoc:
-
     S2R_MAP = { "(" => "( ", ")" => " ) ", "'" => " ' " }
 
     BOOLEAN    = /\A#(f(alse)?|t(rue)?)\Z/
@@ -197,12 +195,10 @@ module Rbscmlex
     CHAR_PAT    = "(#{SINGLE_CHAR_PAT}|#{SPACE_PAT}|#{NEWLINE_PAT})"
     CHAR        = Regexp.new("\\A#{CHAR_PREFIX}#{CHAR_PAT}\\Z")
 
-    # :startdoc:
-
     def tokenize(src)
-      cooked = src.gsub(/[()']/, S2R_MAP)
+      cooked = src.gsub(/[()']/, S2R_MAP).strip
 
-      cooked.split(" ").map { |literal|
+      split_at_space(cooked).map { |literal|
         case literal
         when "("
           Rbscmlex.new_token(:lparen, literal)
@@ -232,6 +228,44 @@ module Rbscmlex
           end
         end
       }
+    end
+
+    def split_at_space(source)
+      escaped = false
+      in_string = false
+      after_space = false
+      slice = String.new        # an empty string
+      results = []
+      source.each_char { |rune|
+        case rune
+        when "\\"
+          slice << rune
+          escaped = !escaped if in_string
+          after_space = false
+        when '"'
+          if !in_string or !escaped
+            in_string = !in_string
+          end
+          slice << rune
+          escaped = false
+          after_space = false
+        when /[\s]/
+          if in_string
+            slice << rune
+          elsif !after_space
+            results << slice.dup
+            slice.clear
+          end
+          escaped = false
+          after_space = true
+        else
+          slice << rune
+          escaped = false
+          after_space = false
+        end
+      }
+      results << slice unless slice.empty?
+      results
     end
 
     # Holds functions to check a literal is valid as an identifier
